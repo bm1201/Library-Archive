@@ -59,6 +59,7 @@ def generate(out, tableName, className, fields, dir) {
     out.println " * @version 1.0.0"
     out.println " * @since"
     out.println " */"
+    out.println "@Setter"
     out.println "@Getter"
     out.println "@Entity"
     out.println "@Table(name = \"$tableName\")"
