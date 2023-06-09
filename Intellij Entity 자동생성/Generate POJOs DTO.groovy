@@ -10,6 +10,7 @@ import javax.swing.*
 * 2. 파일명은 입력한 파일명
 * 3. DB테이블의 모든 컬럼 DTO 생성
 * 4. String의 경우 @Size 어노테이션 추가
+* 5. NotNull 체크 되어 있는경우 @NotNull 어노테이션추가
 */
 
 def input(InputText) {
@@ -69,6 +70,9 @@ def generate(out, tableName, fields, dir) {
         if (it.comment != "" && it.comment != null) {
             out.println "    @ApiModelProperty(value=\"${it.comment} / ${it.oriType}\", example = \"\")"
         }
+        if (it.isNotNull){
+            out.println "    @NotNull"
+        }
         if (it.size != "" && it.size != null){
             out.println "    ${it.size}"
         }
@@ -116,6 +120,7 @@ def calcFields(table) {
                            type : typeStr,
                            size : size,
                            comment : col.getComment(),
+                           isNotNull : col.isNotNull()
                    ]]
     }
 }
