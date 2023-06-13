@@ -62,13 +62,13 @@ def generate(out, tableName, fields, dir) {
     out.println " * @version 1.0.0"
     out.println " * @since"
     out.println " */"
-    out.println "@Setter"
     out.println "@Getter"
-    out.println "@ApiModel(value=\"${fileNm} - \")"
+    out.println "@Setter"
+    out.println "@ApiModel(value = \"${fileNm} - \")"
     out.println "public class ${fileNm}" + " {"
     fields.each() {
         if (it.comment != "" && it.comment != null) {
-            out.println "    @ApiModelProperty(value=\"${it.comment} / ${it.oriType}\", example = \"\")"
+            out.println "    @ApiModelProperty(value = \"${it.comment} / ${it.oriType}\", example = \"\")"
         }
         if (it.isNotNull){
             out.println "    @NotNull"

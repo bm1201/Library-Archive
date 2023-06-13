@@ -81,8 +81,8 @@ def generate(out, tableName, className, fields, dir) {
     out.println " * @version 1.0.0"
     out.println " * @since"
     out.println " */"
-    out.println "@Setter"
     out.println "@Getter"
+    out.println "@Setter"
     out.println "@Entity"
     out.println "@Table(name = \"$tableName\")"
     out.println "public class $tableName" + " implements Serializable {"
@@ -131,6 +131,7 @@ def generateKey(out, tableName, className, fields, dir) {
     out.println "@Getter"
     out.println "@Embeddable"
     out.println "public class $tableName" + "_KEY implements Serializable {"
+    out.println ""
     out.println "    private static final long serialVersionUID = 1L;"
     out.println ""
     fields.each() {
