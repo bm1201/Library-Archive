@@ -1,4 +1,4 @@
-# Intellij Entity자동생성 방법, DTO도 동일한 방법으로 생성
+# Intellij Entity자동생성 방법
 
 1. DataBase를 연결
 2. Generate POJOs.groovy 파일소스를 변경
