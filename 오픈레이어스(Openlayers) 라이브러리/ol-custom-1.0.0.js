@@ -5,6 +5,7 @@
  2023-10-19 드래그 관련 이벤트(setDragEvt(obj), removeDragEvt(obj))로 변경
             지도 중심 이동 함수 that, this 제거
  2023-10-20 오버레이 함수 통합
+ 2023-10-25 팝업 함수 제거
 */
 import Map from 'ol/Map.js';
 import TileLayer from 'ol/layer/Tile';
@@ -23,6 +24,7 @@ import * as olEasing from 'ol/easing';
 import { Fill, Stroke, Style, Icon, Circle } from 'ol/style.js';
 import { Draw, Modify, Snap } from 'ol/interaction.js';
 import { transform } from 'ol/proj';
+import { Zoom, ZoomSlider, ScaleLine} from 'ol/control.js'
 
 const $Class = function (oClassMember) {
     function ClassOrigin() {
@@ -78,7 +80,7 @@ const OL = new ($Class({
                 center: [126.9568209, 37.3942527], //안산시청
                 zoom: 16
             }),
-            // controls: [new ol.control.Zoom(), new ol.control.ZoomSlider(), new ol.control.ScaleLine()]
+            controls: [new Zoom(), new ZoomSlider(), new ScaleLine()]
         });
 
         this[obj.target] = new ($Class({
@@ -234,30 +236,6 @@ const OL = new ($Class({
             },
 
             /******************** overlay 관련 함수 ********************/
-            //오버레이 추가
-            addPopup : function (obj) {//obj = {pid, element}
-                const popup = new Overlay({
-                    element: obj.element
-                });
-                popup['pid'] = obj.pid
-                popup.setPosition(obj.coord);
-
-                map.addOverlay(popup);
-                
-                return popup;
-            },
-            getPopup(obj){//obj = {pid(popupId)}
-                const popupId = obj.pid
-                const overlays = map.getOverlays().getArray();
-
-                for(let i=0; i<overlays.length; i++){
-                    if(overlays[i].pid == popupId){
-                        return overlays[i];
-                    }else if(i === overlays.length-1){
-                        return null;
-                    }
-                }
-            },
             //map에 overlay 추가
             addOverlay: function (obj) {
                 //obj = {
@@ -451,32 +429,6 @@ const OL = new ($Class({
                     }
                 }
             },
-            //layer에 폴리라인 추가 => 추후삭제
-            addPolyline2: function (obj) {// obj = {lid, fid, data}
-                // obj = { 
-                //     lid  : layerId
-                //     fid  : featureId
-                //     data : [[경도, 위도], [경도, 위도], ....]
-                // }
-                const coordlist = obj.data.position;
-                console.log(obj.data.position);
-                const lyr = this.getLayer({lid : obj.lid});
-
-                let coords = "";
-
-                for(let i = 0; i < coordlist.length; i++){
-                    if(coords !== ""){
-                        coords += ",";
-                    }
-                    
-                    coords += coordlist[i].lgtd + " " + coordlist[i].lttd;
-                }
-
-                const lineStr = new WKT().readFeatures("GEOMETRYCOLLECTION(LINESTRING(" + coords + "))", {});
-                lineStr[0].fid = obj.fid;
-
-                lyr.getSource().addFeatures(lineStr);
-            },
 
             /******************** 이벤트 관련 함수 ********************/
             // 셀렉트 & 언셀렉트 이벤트 추가
@@ -644,6 +596,7 @@ const OL = new ($Class({
 
                 this.getLayer({lid : "fcltEvt"}).getSource().addFeature(feature);
             },
+
             /******************** 미사용함수 ********************/
             // /*geojson 읽기*/
             // readGeoJson: function (result, lyr) {
