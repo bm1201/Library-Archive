@@ -8,8 +8,6 @@ import nodeSel from '../../public/images/node_sel.png';
 /**
  * 기본화면 네이버지도
  * @param {*} props 
- *
- * 2023.12.18 selMarkerInfo 배열로 변경하여 선택마커 초기화 로직 수정
  */
 
 const navermaps = window.naver.maps
