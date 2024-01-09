@@ -11,7 +11,8 @@ import nodeSel from '../../public/images/node_sel.png';
  *
  * 2023.12.18 selMarkerInfo 배열로 변경하여 관련 로직 복수처리 가능하도록 소스수정
  * 2023.01.09 이벤트 func이 있는 경우 해당 func 실행(마커의 insert, update참고)
- *            
+ *            우리나라 유효좌표 밖에 있는 좌표의 경우 표출하지 않는 기능 추가(우리나라 유효좌표 (124.5 < lon < 132.0) / (33 < lat < 38.9), markerAddOpt참고)
+ *            폴리라인 edit기능 오픈, drawingManager 상자 숨김
  */
 
 const navermaps = window.naver.maps
@@ -87,6 +88,19 @@ const CompNaverMap = (props) => {
             ];
             setMapMinMax(mapMinMax);
         }
+
+        /**
+         * Edit 이벤트를 사용하기 위해서 필요
+         * */
+        navermaps.Event.once(map.current, 'init', function() {
+            drawingManager.current = new navermaps.drawing.DrawingManager({map: map.current});
+            
+            //그리기 상자 숨김
+            drawingManager.current.setOptions('drawingControl', null);
+            drawingManager.current.setOptions('drawingControlOptions', {
+                position: naver.maps.Position.LEFT_TOP
+            });
+        });
     }, []);
 
     //지도 중심 변경
@@ -115,22 +129,24 @@ const CompNaverMap = (props) => {
             const data = markerAddOpt.data;
 
             for(let i=0, n=data.length; i<n; i++){
-                //마커생성
-                const marker = new navermaps.Marker({
-                    position: new navermaps.LatLng(data[i][lat], data[i][lon]), //마커 생성위치치
-                    size : (5,5),                                               // 마커 size
-                    zIndex : 200,                                               // zIndex
-                    icon : nodeNom,                                             // 마커 Icon  
-                    draggable : true,                                           // 마커 drag 여부
-                });
-
-                marker["markerId"] = data[i][key];//marker에 markerId 추가
-
-                //마커정보 HashMap 형태로 저장
-                markersInfo.current[data[i][key]] = marker;
-                
-                //지도에 추가
-                marker.setMap(map.current);
+                if(124.5 < data[i][lon] && data[i][lon] < 132.0 && 33 < data[i][lat] && data[i][lat] < 38.9){
+                    //마커생성
+                    const marker = new navermaps.Marker({
+                        position: new navermaps.LatLng(data[i][lat], data[i][lon]), //마커 생성위치치
+                        size : (5,5),                                               // 마커 size
+                        zIndex : 200,                                               // zIndex
+                        icon : nodeNom,                                             // 마커 Icon  
+                        draggable : true,                                           // 마커 drag 여부
+                    });
+    
+                    marker["markerId"] = data[i][key];//marker에 markerId 추가
+    
+                    //마커정보 HashMap 형태로 저장
+                    markersInfo.current[data[i][key]] = marker;
+                    
+                    //지도에 추가
+                    marker.setMap(map.current);
+                }
             }
         }
     }, [markerAddOpt])
@@ -239,6 +255,29 @@ const CompNaverMap = (props) => {
                                 marker.setIcon(nodeNom);
                             }
                         });
+                    }
+                    break;
+                case "clear" :
+                    //지도위의 모든 마커 삭제
+                    const tempKey = Object.keys(markersInfo.current);
+                    for(let i=0, n=tempKey.length; i<n; i++){
+                        //마커 삭제
+                        markersInfo.current[tempKey[i]].setMap(null);
+                        //표출마커 Map에서 삭제
+                        delete markersInfo.current[tempKey[i]];
+                    }
+                    selMarkerInfo.current = [];
+
+                    //추가마커정보 초기화
+                    if(insMarkerInfo.current !== null){
+                        insMarkerInfo.current.setMap(null);
+                        insMarkerInfo.current = null;
+                    }
+
+                    //수정마커정보 초기화
+                    if(updMarkerInfo.current !== null){
+                        updMarkerInfo.current.setMap(null);
+                        updMarkerInfo.current = null;
                     }
                     break;
             }
@@ -368,7 +407,7 @@ const CompNaverMap = (props) => {
                     break;
                 case "edit" :
                     // Edit 이벤트를 사용하기 위해서 DrawingManager 필요
-                    drawingManager.current = new navermaps.drawing.DrawingManager({map: map.current});
+                    // drawingManager.current = new navermaps.drawing.DrawingManager({map: map.current});
 
                     if(drawingManager.current !== null){
                         drawingManager.current.addDrawing(polylinesInfo.current[polylineEvtOpt.key], navermaps.drawing.DrawingMode.POLYLINE, polylineEvtOpt.key);
