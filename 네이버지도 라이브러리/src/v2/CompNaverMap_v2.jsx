@@ -8,12 +8,16 @@ import nodeSel from '../../public/images/node_sel.png';
 /**
  * 기본화면 네이버지도
  * @param {*} props 
+ *
+ * 2023.12.18 selMarkerInfo 배열로 변경하여 관련 로직 복수처리 가능하도록 소스수정
+ * 2023.01.09 이벤트 func이 있는 경우 해당 func 실행(마커의 insert, update참고)
+ *            
  */
 
 const navermaps = window.naver.maps
 
 const CompNaverMap = (props) => {
-    const { setMapMinMax, mapCenterLonLat, zoomSize, markerAddOpt, markerEvtOpt, polylineAddOpt, polylineEvtOpt, polylineAddMinMaxOpt, form, setForm } = props;
+    const { setMapMinMax, mapCenterLonLat, zoomSize, markerAddOpt, markerEvtOpt, polylineAddOpt, polylineEvtOpt, ...others} = props;
 
     //네이버지도
     const mapId = props?.mapId || 'navermap'
@@ -35,7 +39,7 @@ const CompNaverMap = (props) => {
     useEffect(() => {
         map.current = new navermaps.Map(mapId, {
             zoom: 14,
-            center: new navermaps.LatLng(37.715133, 126.734086),//해당 좌표를 기점으로 지도가 추가된다.
+            center: new navermaps.LatLng(37.39256374, 126.95518245),//해당 좌표를 기점으로 지도가 추가된다.
             mapTypeId: navermaps.MapTypeId.TERRAIN,
             minZoom: 6,
             maxZoom: 20,
@@ -83,15 +87,14 @@ const CompNaverMap = (props) => {
             ];
             setMapMinMax(mapMinMax);
         }
-        /**
-         * Edit 이벤트를 사용하기 위해서 필요
-         * navermaps.Event.once안에 넣어야지 신버전으로 사용하는것인데 현재 소스상에서는 내부에 있을경우
-         * 시점에 문제가 있어서 필요에 따라 수정해서 사용필요
-         * */
-        // drawingManager.current = new navermaps.drawing.DrawingManager({map: map.current});
-        // navermaps.Event.once(map.current, 'init', function() {
-        // });
     }, []);
+
+    //지도 중심 변경
+    useEffect(() => {
+        if(mapCenterLonLat !== undefined && mapCenterLonLat.length > 0){
+            map.current.setCenter(new navermaps.LatLng(mapCenterLonLat[1], mapCenterLonLat[0]));
+        }
+    }, [mapCenterLonLat])
 
     //지도 줌 변경
     useEffect(() => {
@@ -99,13 +102,6 @@ const CompNaverMap = (props) => {
             map.current.setZoom(zoomSize);
         }
     }, [zoomSize])
-
-    //지도 중심 변경
-    useEffect(() => {
-        if(mapCenterLonLat !== undefined){
-            map.current.setCenter(new navermaps.LatLng(mapCenterLonLat[1], mapCenterLonLat[0]));
-        }
-    }, [mapCenterLonLat])
     /******************** 공통기능 End ********************/
 
     /******************** 마커 관련 기능 ********************/
@@ -128,30 +124,20 @@ const CompNaverMap = (props) => {
                     draggable : true,                                           // 마커 drag 여부
                 });
 
+                marker["markerId"] = data[i][key];//marker에 markerId 추가
+
                 //마커정보 HashMap 형태로 저장
                 markersInfo.current[data[i][key]] = marker;
                 
                 //지도에 추가
                 marker.setMap(map.current);
             }
-
-            console.log("실행!!!!!!!!!");
         }
     }, [markerAddOpt])
     
     //마커 이벤트 처리
     useEffect(() => {
         if(markerEvtOpt !== undefined && Object.keys(markerEvtOpt).length > 0){
-            // //이벤트를 사용할 마커가 없는 경우(ins기능 제외)
-            // if(markerEvtOpt.type !== "insert"){
-            //     for(let i=0, n=markerEvtOpt.key.length; i<n; i++){
-            //         if(Object.keys(markersInfo.current).indexOf(markerEvtOpt.key[i]) === false){
-            //             alert("이벤트를 사용할 마커가 존재하지 않습니다.");
-            //             return;
-            //         }
-            //     }
-            // }
-
             switch(markerEvtOpt.type){
                 case "select" :
                     //기존 선택마커가 있는 경우 기본마커로 Icon 변경
@@ -179,7 +165,7 @@ const CompNaverMap = (props) => {
 
                     break;
                 case "unSelet" :
-                    //기존 선택마커가 있는 경우 기본마커로 Icon 변경
+                    //기존 선택마커 모두 기본마커로 변경
                     for(let i=0, n=selMarkerInfo.current.length; i<n; i++){
                         selMarkerInfo.current[i].setIcon(nodeNom);
                     }
@@ -201,20 +187,10 @@ const CompNaverMap = (props) => {
                         });
                         marker.setMap(map.current);
                         insMarkerInfo.current = marker;
-
-                        //setForm이 있는 경우 위도 경도 값 세팅
-                        if(setForm !== undefined){
-                            setForm((prev) => {
-                                const form = { ...prev };
-                                form.items?.map((i) => {
-                                    if(i.id === "lon"){
-                                        i.value = e.coord.x
-                                    }else if(i.id === "lat"){
-                                        i.value = e.coord.y
-                                    }
-                                });
-                                return form;
-                            });
+                        
+                        //이벤트에 함수옵션이 있는경우 함수 실행
+                        if(markerEvtOpt?.func){
+                            markerEvtOpt.func(e);
                         }
                     });
                     break;
@@ -235,19 +211,9 @@ const CompNaverMap = (props) => {
                         marker.setMap(map.current);
                         updMarkerInfo.current = marker;
 
-                        //setForm이 있는 경우 위도 경도 값 세팅
-                        if(setForm !== undefined){
-                            setForm((prev) => {
-                                const form = { ...prev };
-                                form.items?.map((i) => {
-                                    if(i.id === "lon"){
-                                        i.value = e.coord.x
-                                    }else if(i.id === "lat"){
-                                        i.value = e.coord.y
-                                    }
-                                });
-                                return form;
-                            });
+                        //이벤트에 함수옵션이 있는경우 함수 실행
+                        if(markerEvtOpt?.func){
+                            markerEvtOpt.func(e);
                         }
                     });
                     break;
@@ -269,8 +235,6 @@ const CompNaverMap = (props) => {
                         navermaps.Event.addListener(marker, 'click', function (e) {
                             if(marker.getIcon() === nodeNom){
                                 marker.setIcon(nodeEdit);
-                                //클릭 시 폼에 데이터 세팅
-                                
                             }else{
                                 marker.setIcon(nodeNom);
                             }
@@ -288,7 +252,6 @@ const CompNaverMap = (props) => {
         if(polylineAddOpt !== undefined && Object.keys(polylineAddOpt).length > 0){
             //polylineAddOpt 있는 경우
             const key = polylineAddOpt.key;
-            const linkVtx = polylineAddOpt.linkVtx;
             const data = polylineAddOpt.data;
 
             for(let i=0, n=data.length; i<n; i++){
@@ -302,7 +265,7 @@ const CompNaverMap = (props) => {
                     strokeLineJoin: 'round', //선들이 맞닿는 부분의 마감 스타일
                     clickable: true          //폴리라인에 클릭 이벤트를 사용시 필수로 추가해야함
                 });
-                polyline[key] = data[i][key];
+                polyline["polylineId"] = data[i][key];//polyline에 key추가
 
                 polyline.setMap(map.current);//폴리라인 표출
 
@@ -314,22 +277,13 @@ const CompNaverMap = (props) => {
     //폴리라인 이벤트 처리
     useEffect(() => {
         if(polylineEvtOpt !== undefined && Object.keys(polylineEvtOpt).length > 0){
-            // //이벤트를 사용할 폴리라인이 없는 경우
-            // for(let i=0, n=polylineEvtOpt.key.length; i<n; i++){
-            //
-            //     if(Object.keys(polylineEvtOpt.key).indexOf(polylineEvtOpt.key[i]) === false){
-            //         alert("이벤트를 사용할 폴리라인이 존재하지 않습니다.");
-            //         return;
-            //     }
-            // }
-
             switch(polylineEvtOpt.type){
                 case "select" :
                     //기존 선택 폴리라인이 있는 경우 제거
-                    for (const key in selPolylineInfo.current) {
+                    for(const key in selPolylineInfo.current){
                         const polyline = selPolylineInfo.current[key];
 
-                        if (polyline) {
+                        if(polyline){
                             polyline.setMap(null); // 지도에서 제거
                             delete selPolylineInfo.current[key]; // selPolylineInfo에서 제거
                         }
@@ -347,13 +301,14 @@ const CompNaverMap = (props) => {
                             zIndex : 100
                         });
 
+                        polyline["polylineId"] = polylinesInfo.current[polylineEvtOpt.key[i]]?.polylineId;
                         polyline.setMap(map.current);// 지도에 추가
 
                         //폴리라인 마커 HashMap에 저장
                         selPolylineInfo.current[polylineEvtOpt.key[i]] = polyline;
                     }
                     break;
-                case "unSelet" :
+                case "unSelect" :
                     //폴리라인 unSelect 이벤트
                     for (const key in selPolylineInfo.current) {
                         const polyline = selPolylineInfo.current[key];
@@ -395,7 +350,7 @@ const CompNaverMap = (props) => {
                                 clickable : true
                             });
 
-                            polyline2["linkId"] = keyList[i];
+                            polyline2["polylineId"] = keyList[i];
 
                             polyline2.setMap(map.current);// 지도에 추가
 
@@ -404,15 +359,17 @@ const CompNaverMap = (props) => {
 
                             //선택한 폴리라인 클릭시에는 기본 폴리라인 표출
                             navermaps.Event.addListener(polyline2, 'click', function (e) {
-                                selPolylineInfo.current[e.overlay.linkId].setMap(null);
-                                delete selPolylineInfo.current[e.overlay.linkId]; // selPolylineInfo에서 제거
-                                console.log("삭제 후");
-                                console.log(selPolylineInfo.current);
+                                selPolylineInfo.current[e.overlay.polylineId].setMap(null);
+                                // selPolylineInfo에서 제거
+                                delete selPolylineInfo.current[e.overlay.polylineId];
                             });
                         });
                     }
                     break;
                 case "edit" :
+                    // Edit 이벤트를 사용하기 위해서 DrawingManager 필요
+                    drawingManager.current = new navermaps.drawing.DrawingManager({map: map.current});
+
                     if(drawingManager.current !== null){
                         drawingManager.current.addDrawing(polylinesInfo.current[polylineEvtOpt.key], navermaps.drawing.DrawingMode.POLYLINE, polylineEvtOpt.key);
                         navermaps.Event.addListener(map.current, 'mousemove', function (e) {

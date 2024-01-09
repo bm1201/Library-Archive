@@ -1,5 +1,5 @@
 ### Update Note
-1. mapId만 다르면 지도컨포넌트를 재사용할 수 있음
+1. mapId만 다르면 지도컨포넌트를 재사용할 수 있도록 수정
 2. 데이터를 HashMap 형태로 저장하여 특정데이터를 찾을 때 v1처럼 배열 전체를 순환하지 않아 속도개선
 3. 특정 줌 사이즈를 넘어가면 지도의 마커, 폴리라인 표출되지 않음
 4. MinMax관련 소스 제거
@@ -50,12 +50,12 @@
     - 기능 : data를 기반으로 key를 PK로 갖는 마커를 지도위에 생성(HashMap으로 생성)
 
     - 형태(모든 속성값 필수입력)
-    fnMarker : {
+    markerAddOpt : {
         key   : "",                   // 마커 key 컬럼 지정 => PK의 역할
         coord : {lon : "", lat : ""}, // 마커 좌표(위도, 경도) 컬럼 지정
         data  : []                    // 마커 데이터
     },
-    ex) fnMarker : {
+    ex) markerAddOpt : {
             key  : "nodeId",
             coord : {lon : "lon", lat : "lat"},
             data : [
@@ -73,7 +73,8 @@
     - 형태
     markerEvtOpt : {
         type : "", //이벤트 타입 지정 (필수)
-        key  : []  //이벤트 실행할 데이터 키값 (선택)
+        key  : []  //이벤트 실행할 데이터 키값
+        func : (e) => {} //이벤트에서 실행시킬 함수 ex) 폼의 데이터변경등
     }
     
     - type 종류
@@ -91,15 +92,17 @@
     "insert"  : 지도에서 클릭한 위치에 추가마커를 생성한다.
     ex) markerEvtOpt : {
         type : "insert"
+        func : (e) => {}
     }
 
     "update"  : 지도에서 클릭한 위치에 편집마커를 생성한다.
-        ex) markerEvtOpt : {
+    ex) markerEvtOpt : {
         type : "update"
+        func : (e) => {}
     }
 
     "delete"  : data와 같은 키를 가진 마커를 지도에서 삭제
-        ex) markerEvtOpt : {
+    ex) markerEvtOpt : {
         type : "delete"
         key  : ["test"] //삭제할 마커의 키를 입력(2개 이상인 경우 ["test", "test1", ...])
     }
@@ -121,7 +124,7 @@
         data : [],      // 폴리라인 데이터
     },
 
-    ex) fnPolyLine : {
+    ex) polylineAddOpt : {
             key  : "linkId",
             data : [
                 {
@@ -154,7 +157,7 @@
         }
     - 참고사항 : linkVtx의 경우 데이터 형태가 [lon, lat]이여야한다.
 
-    2. polyLine 관련 이벤트 함수
+    1. polyLine 관련 이벤트 함수
     - 옵션명 : polylineEvtOpt
     - 기능 : data와 동일한 데이터를 가진 폴리라인에 이벤트처리
     - 형태
@@ -188,7 +191,8 @@
 
     "edit"  : 지도의 마커에 수정 이벤트를 추가
     ex) polylineEvtOpt : {
-        type : "edit"
+        type : "edit",
+        key : ["test3"]
     }
 
     - 참고사항 : 수정기능 사용시 네이버지도 &submodules=drawing 추가 필수
