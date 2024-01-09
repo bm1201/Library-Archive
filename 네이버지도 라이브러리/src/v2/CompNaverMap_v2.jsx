@@ -96,10 +96,10 @@ const CompNaverMap = (props) => {
             drawingManager.current = new navermaps.drawing.DrawingManager({map: map.current});
             
             //그리기 상자 숨김
-            drawingManager.current.setOptions('drawingControl', null);
             drawingManager.current.setOptions('drawingControlOptions', {
                 position: naver.maps.Position.LEFT_TOP
             });
+            drawingManager.current.setOptions('drawingControl', null);
         });
     }, []);
 
