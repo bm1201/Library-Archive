@@ -8,7 +8,7 @@ import nodeSel from '../../public/images/node_sel.png';
 /**
  * 기본화면 네이버지도
  * @param {*} props 
- *
+ * 2023.12.07 소스 Refactorying 및 기능개선
  * 2023.12.18 selMarkerInfo 배열로 변경하여 관련 로직 복수처리 가능하도록 소스수정
  * 2023.01.09 이벤트 func이 있는 경우 해당 func 실행(마커의 insert, update참고)
  *            우리나라 유효좌표 밖에 있는 좌표의 경우 표출하지 않는 기능 추가(우리나라 유효좌표 (124.5 < lon < 132.0) / (33 < lat < 38.9), markerAddOpt참고)
