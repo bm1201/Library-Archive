@@ -10,8 +10,7 @@
 
 2. 기능개선 및 수정  
    addLayer함수에 heatmap타입 추가  
-   우리나라 유효좌표 밖에 있는 좌표의 경우 표출하지 않는 기능 추가  
-   (우리나라 유효좌표 (124.5 < lon < 132.0) / (33 < lat < 38.9), addFeature 참고)  
+   우리나라 유효좌표 밖에 있는 좌표의 경우 표출하지 않는 기능 추가(우리나라 유효좌표 (124.5 < lon < 132.0) / (33 < lat < 38.9), addFeature 참고)  
    addFeature함수에 addPolyline함수 통합 및 히트맵마커 표출기능 추가  
    폴리라인 클릭 시 오류 처리 (layer.values_ -> layer?.values_)  
    레이어 클릭 시 overlay 모두 삭제 처리  
