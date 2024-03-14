@@ -1,5 +1,5 @@
 ### Openlayers Library
-- **last released version : v1**
+- **last released version : v2**
 - **update note**
 
 ### 예시소스
