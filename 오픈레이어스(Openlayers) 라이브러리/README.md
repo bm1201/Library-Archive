@@ -18,7 +18,8 @@
    - addFeature(), addPolyline()에서 type 정보도 저장  
    - 마커 클릭 시 커서 포인터로 변경  
    - addFeature()에서 data에 해당 feature의 정보도 저장  
-   - addPolyline()에서 data에 해당 polyline의 정보도 저장  
+   - addPolyline()에서 data에 해당 polyline의 정보도 저장
+   - 지도 타일을 함수로 가져올 수 있도록 소스수정(2024-04-22)
 
 ### 예시소스
 - https://github.com/bm1201/openLayers-test

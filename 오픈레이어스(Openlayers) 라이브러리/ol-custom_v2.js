@@ -24,29 +24,94 @@
  * 2024-03-11 폴리라인 클릭 시 오류 처리 (layer.values_ -> layer?.values_).
  * 2024-03-14 addLayer함수에 heatmap타입 추가
  *            addFeature함수에 addPolyline함수 통합 및 히트맵마커 표출기능 추가
- *  
+ * 2024-03-14 addLayer함수에 heatmap타입 추가
+ *            addFeature함수에 addPolyline함수 통합 및 히트맵마커 표출기능 추가
+ * 2024-04-22 지도 타일을 함수로 가져올 수 있도록 소스수정(현재 지원 타일 - 카카오, OSM, StadiaMaps)
  */
 
+import proj4 from 'proj4';
+import { register } from 'ol/proj/proj4.js';
 import Map from 'ol/Map.js';
-import TileLayer from 'ol/layer/Tile';
-import HeatmapLayer from 'ol/layer/Heatmap.js'
 import { OSM } from 'ol/source.js';
-import View from 'ol/View.js';
+import { TileGrid } from 'ol/tilegrid.js';
+import StadiaMaps from 'ol/source/StadiaMaps.js';
+import TileLayer from 'ol/layer/Tile';
+import HeatmapLayer from 'ol/layer/Heatmap.js';
 import VectorLayer from 'ol/layer/Vector.js';
+import XYZ from 'ol/source/XYZ.js';
+import View from 'ol/View.js';
 import VectorSource from 'ol/source/Vector.js';
 import Overlay from 'ol/Overlay.js';
 import Feature from 'ol/Feature.js';
 import Point from 'ol/geom/Point.js';
 import WKT from 'ol/format/WKT.js';
 import Collection from 'ol/Collection.js';
-import {unByKey} from 'ol/Observable';
+import { unByKey } from 'ol/Observable';
 import * as olRender from 'ol/render';
 import * as olEasing from 'ol/easing';
 import { Fill, Stroke, Style, Icon, Circle } from 'ol/style.js';
 import { Draw, Modify, Snap } from 'ol/interaction.js';
-import { transform } from 'ol/proj';
-import { Zoom, ZoomSlider, ScaleLine} from 'ol/control.js'
-import StadiaMaps from 'ol/source/StadiaMaps.js';
+import { transform, Projection, fromLonLat } from 'ol/proj.js';
+import { Zoom, ZoomSlider, ScaleLine } from 'ol/control.js';
+
+//카카오 좌표계 추가
+proj4.defs('EPSG:5181', '+proj=tmerc +lat_0=38 +lon_0=127 +k=1 +x_0=200000 +y_0=500000 +ellps=GRS80 +units=m +no_defs');
+register(proj4);
+
+const kakao = new Projection({
+    code: "EPSG:5181",
+    extent: [-30000, -60000, 494288, 988576]
+});
+
+/******************** 지도별 타일 가져오는 함수 ********************/
+//카카오
+const getKakaoTile = () => {
+    const kakaoTile = new TileLayer({
+        source: new XYZ({
+            projection : kakao,
+            url: 'http://map.daumcdn.net/map_k3f_prod/bakery/image_map_png/PNGSD01/v21_cclzf/{z}/{-y}/{x}.png',
+            tileGrid : new TileGrid({
+                extent : [-30000, -60000, 494288, 988576],
+                resolutions : [ 2048, 1024, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1, 0.5, 0.25 ], 
+            }),
+            tileLoadFunction: function (i, src) {
+                let a = src.split('v21_cclzf/');
+                let b = a[1].split('/');
+                let z = Number(b[0]);
+                let tZ = 14 - z;
+                i.getImage().src = src.replace('/' + z + '/', '/' + tZ + '/');
+            },
+        }),
+        type: 'Tile'
+    })
+
+    return kakaoTile;
+}
+
+//OpenStreetMap
+const getGoogleTile = () => {
+    const googleTile = new TileLayer({
+        source: new OSM(),
+        type: 'Tile'
+    })
+
+    return googleTile;
+}
+
+//StadiaMaps(다크모드)
+const getStadiaTile = () => {
+    const stadiaTile = new TileLayer({
+        source: new StadiaMaps({
+            //StadiaMaps 다크모드
+            layer: 'alidade_smooth_dark',
+            retina: true,
+            apiKey: ["지도API 키"]
+        }),
+        type: 'Tile'
+    });
+
+    return stadiaTile;
+}
 
 const $Class = function (oClassMember) {
     function ClassOrigin() {
@@ -92,20 +157,14 @@ const OL = new ($Class({
         // obj = target
         let map = new Map({
             layers: [
-                new TileLayer({//가장 바탕이 되는 레이어
-                    source: new StadiaMaps({ //StadiaMaps 다크모드
-                        layer: 'alidade_smooth_dark',
-                        retina: true,
-                        apiKey: '146a217e-fcd4-44dd-a057-8093894c7f05'
-                    }),
-                    type : "Tile"
-                }),
+                getKakaoTile()
             ],
             target: obj.target,
             view: new View({
-                projection: 'EPSG:4326',
-                center: [128.940775, 35.97005278], //지도의 중심 좌표 - 현재(영천시청)
-                zoom: 18
+                projection : kakao, //좌표계 설정(default : 'EPSG:3857')
+                center  : fromLonLat([128.940775, 35.97005278], kakao), //지도 센터설정
+                zoom    : 11,  //지도 줌
+                minZoom : 5 //지도 최소 줌
             }),
             controls: [new Zoom(), new ZoomSlider(), new ScaleLine()]
         });
@@ -134,10 +193,7 @@ const OL = new ($Class({
                     }
 
                     //라이트모드 tileLayer
-                    const lightLyr = new TileLayer({
-                        source: new OSM(), //구글지도
-                        type : "Tile"
-                    })
+                    const lightLyr = getKakaoTile();
 
                     lightLyr.setZIndex(0);
                     this.map.addLayer(lightLyr);
@@ -151,14 +207,8 @@ const OL = new ($Class({
                         }
                     }
 
-                    const darkLyr = new TileLayer({
-                        source: new StadiaMaps({ //StadiaMaps 다크모드
-                            layer: 'alidade_smooth_dark',
-                            retina: true,
-                            apiKey: '146a217e-fcd4-44dd-a057-8093894c7f05'
-                        }),
-                        type : "Tile"
-                    });
+                    //다크모드 tileLayer
+                    const darkLyr = getStadiaTile();
 
                     darkLyr.setZIndex(0);
                     this.map.addLayer(darkLyr);
