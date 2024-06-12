@@ -26,6 +26,9 @@
  *            addFeature함수에 addPolyline함수 통합 및 히트맵마커 표출기능 추가
  * 2024-04-22 지도 타일을 함수로 가져올 수 있도록 소스수정(현재 지원 타일 - 카카오, OSM, StadiaMaps)
  * 2024-04-23 지도 다크모드 기능 추가(Tile이 render 되기 전에 canvas에 필터를 걸고 render 된 후에 필터를 제거하여 Tile에만 다크모드가 적용되도록 구현)
+ * 2024-05-31 클러스터기능을 제공하는 addCluster()함수 추가(기존 addFeature와 addLayer에 녹일 수 있는지 고민 필요)
+ * 2024-06-03 setHiddenEvt(layer) - 전달받은 레이어만 감추기
+ *            마커 표출 시 회전처리도 가능하도록 소스 수정중.....
  */
 
 import proj4 from 'proj4';
@@ -162,9 +165,9 @@ const $Class = function (oClassMember) {
 };
 
 const OL = new ($Class({
-    $init: function () {
-        console.log('init');
-    },
+    // $init: function () {
+    //     console.log('init');
+    // },
     /*통신*/
     ajax: function (url, callback) {
         // Create an XMLHttpRequest object
@@ -186,6 +189,9 @@ const OL = new ($Class({
     transformWGS84: function (xy) {
         return transform(xy, 'EPSG:3857', 'EPSG:4326');
     },
+    transformKakao: function (xy) {
+        return fromLonLat(xy, kakao);;
+    },
     /*지도 생성*/
     roadMap: function (obj) {
         let map = new Map({
@@ -195,9 +201,9 @@ const OL = new ($Class({
             target: obj.target,
             view: new View({
                 projection : kakao, //좌표계 설정(default : 'EPSG:3857')
-                center : fromLonLat([128.940775, 35.97005278], kakao), //지도 센터설정
+                center : fromLonLat([128.938665, 35.97305278], kakao), //지도 센터설정
                 extent : [261366.037460875, 216430.6425167995, 507126.037460875, 323310.6425167995],//지도 영역설정
-                zoom : 11,  //지도 줌
+                zoom : 12,  //지도 줌
                 minZoom : 5 //지도 최소 줌
             }),
             controls: [new Zoom(), new ZoomSlider(), new ScaleLine()],
@@ -216,7 +222,7 @@ const OL = new ($Class({
             /******************** 라이트/다크 모드변경 ********************/
             //TileLayer를 교체하는 방법으로 모드 변경구현
             changeCanvas: function (obj) {
-                if (obj.type === 'ligth') {
+                if (obj.type === 'light') {
                     //tileLayer 제거
                     let layers = this.map.getLayers().getArray();
                     for (let layer of layers) {
@@ -273,6 +279,14 @@ const OL = new ($Class({
                 }
 
                 return null;
+            },
+            getLayerAll: function() {
+                const layers = this.map.getLayers().getArray();
+                let lidList = [];
+                for(let i=1; i<layers.length; i++) {
+                    lidList.push(layers[i].lid);
+                }
+                return lidList;
             },
             /*레이어 추가*/
             addLayer: function (obj) {
@@ -492,7 +506,7 @@ const OL = new ($Class({
                             obj.xy[1] < 38.9
                         ) {
                             //우리나라 유효좌표 안에 있는 경우 생성
-                            ftr = new Feature({ geometry: new Point(obj.xy) });
+                            ftr = new Feature({ geometry: new Point( OL.transformKakao(obj.xy) ) });
                             ftr.fid = obj.fid;
                             ftr.type = 'heatMap';
                             ftr.layer = layer;
@@ -531,7 +545,22 @@ const OL = new ($Class({
 
                                 let istyle = layer.istyle[obj.state];
 
-                                ftr = new Feature({ geometry: new Point(obj.xy) });
+                                //회전 속성값이 있는 경우 rotation 적용
+                                if(obj.rotation){
+                                    const images = new Icon({
+                                        anchor: [0.5, 0.5],
+                                        anchorXUnits: 'fraction',
+                                        anchorYUnits: 'fraction',
+                                        src: istyle.getImage().getSrc(),
+                                        scale: 1,
+                                        opacity: 1,
+                                        rotation : obj.rotation
+                                    })
+
+                                    istyle.setImage(images);
+                                }
+
+                                ftr = new Feature({ geometry: new Point(fromLonLat(obj.xy, "EPSG:5181")) });
 
                                 ftr.fid = obj.fid;
                                 ftr.type = obj.type;
@@ -559,6 +588,8 @@ const OL = new ($Class({
                         let coords = '';
 
                         for (let i = 0; i < coordlist.length; i++) {
+                            coordlist[i] = fromLonLat(coordlist[i], kakao);
+
                             if (coords !== '') {
                                 coords += ',';
                             }
@@ -675,6 +706,7 @@ const OL = new ($Class({
                 var that = this;
                 that.map.on('click', function (e) {
                     let layers = e.target.getLayers().getArray();
+                    
 
                     //레이어 클릭 이벤트
                     for (let i = 0; i < layers.length; i++) {
@@ -897,11 +929,19 @@ const OL = new ($Class({
             setVisibleEvt: function (layer) {
                 let layers = this.map.getLayers().getArray();
 
-                console.log(layers[1]);
-
                 for (let l = 1; l < layers.length; l++) {
                     if (layer.includes(layers[l].lid)) {
                         layers[l].setOpacity(1);
+                    }
+                }
+            },
+            // 전달받은 레이어 숨기기 이벤트
+            setHiddenEvt: function (layer) {
+                let layers = this.map.getLayers().getArray();
+
+                for (let l = 1; l < layers.length; l++) {
+                    if (layer.includes(layers[l].lid)) {
+                        layers[l].setOpacity(0);
                     }
                 }
             },
@@ -950,6 +990,54 @@ const OL = new ($Class({
 
                 vectorLayer.on('postrender', moveFeature);
                 ftr.setGeometry(null);
+            },
+            addCluster : function (obj) {
+                const {
+                    ftrArr
+                } = obj;
+
+                const source = new VectorSource({
+                    features: ftrArr,
+                });
+                  
+                const clusterSource = new Cluster({
+                    distance: 40,
+                    minDistance: 20,
+                    source: source,
+                });
+
+                const styleCache = {};
+                
+                const clusters = new VectorLayer({
+                    source: clusterSource,
+                    style: function (feature) {
+                        const size = feature.get('features').length;
+                        let style = styleCache[size];
+                        if (!style) {
+                            style = new Style({
+                                image: new Circle({
+                                radius: 10,
+                                stroke: new Stroke({
+                                    color: '#fff',
+                                }),
+                                fill: new Fill({
+                                    color: '#3399CC',
+                                }),
+                                }),
+                                text: new Text({
+                                    text: size.toString(),
+                                    fill: new Fill({
+                                        color: '#fff',
+                                    }),
+                                }),
+                            });
+                            styleCache[size] = style;
+                        }
+                        return style;
+                    },
+                });
+
+                this.map.addLayer(clusters);
             }
             /******************** 미사용함수 ********************/
             // /*geojson 읽기*/
