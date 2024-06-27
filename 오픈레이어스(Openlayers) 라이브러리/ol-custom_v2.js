@@ -28,6 +28,7 @@
  * 2024-04-23 지도 다크모드 기능 추가(Tile이 render 되기 전에 canvas에 필터를 걸고 render 된 후에 필터를 제거하여 Tile에만 다크모드가 적용되도록 구현)
  * 2024-05-31 클러스터기능을 제공하는 addCluster()함수 추가(기존 addFeature와 addLayer에 녹일 수 있는지 고민 필요)
  * 2024-06-03 setHiddenEvt(layer) - 전달받은 레이어만 감추기
+ * 2024-06-27 폴리라인의 경우 레이어 전체에 스타일을 적용하는 오류가 있어 폴리라인에 개별로 스타일이 적용되도록 소스수정 
  *            마커 표출 시 회전처리도 가능하도록 소스 수정중.....
  */
 
@@ -605,8 +606,13 @@ const OL = new ($Class({
                         lineStr[0].data = obj?.data || {}; //polyline 정보 저장
                         lineStr[0].type = obj.type;
 
+                        let istyle = lyr.istyle[obj.state];
+                        
+                        lineStr[0].setStyle(istyle);
+
                         lyr.getSource().addFeatures(lineStr);
-                        lyr.setStyle(lyr.istyle[obj.state]);
+
+                        return lineStr;
                     }
                 }
             },
