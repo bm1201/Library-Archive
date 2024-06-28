@@ -29,7 +29,7 @@
  * 2024-05-31 클러스터기능을 제공하는 addCluster()함수 추가(기존 addFeature와 addLayer에 녹일 수 있는지 고민 필요)
  * 2024-06-03 setHiddenEvt(layer) - 전달받은 레이어만 감추기
  * 2024-06-27 폴리라인의 경우 레이어 전체에 스타일을 적용하는 오류가 있어 폴리라인에 개별로 스타일이 적용되도록 소스수정 
- *            마커 표출 시 회전처리도 가능하도록 소스 수정중.....
+ * 2024-06-28 마커에 회전속성 값 적용할 수 있도록 기능 업데이트
  */
 
 import proj4 from 'proj4';
@@ -542,26 +542,27 @@ const OL = new ($Class({
                             if (ftr === null) {
                                 if (layer.istyle.length < obj.state + 1) {
                                     obj.state = 0;
-                                }
-
+                                }    
+                                
                                 let istyle = layer.istyle[obj.state];
-
-                                //회전 속성값이 있는 경우 rotation 적용
-                                if(obj.rotation){
-                                    const images = new Icon({
-                                        anchor: [0.5, 0.5],
-                                        anchorXUnits: 'fraction',
-                                        anchorYUnits: 'fraction',
-                                        src: istyle.getImage().getSrc(),
-                                        scale: 1,
-                                        opacity: 1,
-                                        rotation : obj.rotation
-                                    })
-
-                                    istyle.setImage(images);
-                                }
-
+                                
                                 ftr = new Feature({ geometry: new Point(fromLonLat(obj.xy, "EPSG:5181")) });
+
+                                if(obj.rotation){
+                                    let newStyle = new Style({
+                                        image: new Icon({
+                                            anchor: [0.5, 0.5],
+                                            anchorXUnits: 'fraction',
+                                            anchorYUnits: 'fraction',
+                                            src: istyle.getImage().getSrc(),
+                                            scale: 1,
+                                            opacity: 1,
+                                            rotation : obj.rotation
+                                        })
+                                    });
+
+                                    istyle = newStyle;
+                                }
 
                                 ftr.fid = obj.fid;
                                 ftr.type = obj.type;
